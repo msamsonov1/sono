@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RFWaveCode - Sonography Simulation System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+  <!-- KaTeX for elegant LaTeX mathematical typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #070b13;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* LaTeX Math Card Styling */
+    .latex-font {
+      font-family: 'KaTeX_Main', 'Latin Modern Roman', 'Times New Roman', serif;
+    }
+    .katex {
+      font-size: 1.05em !important;
+      color: #e2e8f0;
+    }
+    .katex-display {
+      margin: 0.35em 0 !important;
+    }
+    /* Medical CRT/Monitor Glow effects */
+    .crt-glow {
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15), inset 0 0 15px rgba(56, 189, 248, 0.05);
+    }
+    .rf-glow {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.12), inset 0 0 15px rgba(16, 185, 129, 0.05);
+    }
+    /* Custom Range Sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1e293b;
+      border-radius: 9999px;
+      height: 7px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      border: 2px solid #0f172a;
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+    input[type=range].slider-emerald::-webkit-slider-thumb {
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+    }
+    input[type=range].slider-amber::-webkit-slider-thumb {
+      background: #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+    }
+    /* Scanline pattern for CRT authentic ultrasound feel */
+    .scanline-overlay {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#070b13] text-slate-200">
+
+  <header class="border-b border-slate-800 bg-[#0a101d]/90 backdrop-blur sticky top-0 z-50 px-4 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <i class="fa-solid fa-wave-square text-white text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold tracking-tight text-white flex items-center">
+              RFWaveCode
+              <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">sonography</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400">Clinical RF Echo Demodulation & B-Mode Diagnostic Simulation</p>
+        </div>
+      </div>
+
+      <!-- Clinical Status Telemetry -->
+      <div class="flex items-center gap-2 sm:gap-4 text-xs font-mono-code">
+        <div class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-400">PROBE:</span>
+          <span class="text-emerald-400 font-semibold" id="probeTypeBadge">L12-4 Linear</span>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center space-x-2">
+          <span class="text-slate-400">FPS:</span>
+          <span class="text-cyan-400 font-semibold" id="fpsDisplay">60</span>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-lg hidden md:flex items-center space-x-2">
+          <span class="text-slate-400">MI:</span>
+          <span class="text-amber-400 font-semibold" id="miDisplay">0.82</span>
+          <span class="text-slate-500">|</span>
+          <span class="text-slate-400">TI:</span>
+          <span class="text-amber-400 font-semibold" id="tiDisplay">0.31</span>
+        </div>
+        <button id="freezeBtn" class="bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 text-white font-medium px-3.5 py-1.5 rounded-lg border border-slate-700 flex items-center space-x-1.5 transition">
+          <i class="fa-solid fa-pause text-xs" id="freezeIcon"></i>
+          <span id="freezeText">Freeze</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+    <!-- LEFT COLUMN: Real-Time Interactive Controls & Sliders (4 cols) -->
+    <section class="lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- 3 Primary User Sliders Card -->
+      <div class="bg-[#0e1626] border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800/80">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-sliders text-cyan-400 text-sm"></i>
+            <h2 class="text-sm font-semibold tracking-wide text-white uppercase">Acoustic Signal Controls</h2>
+          </div>
+          <span class="text-[10px] uppercase font-mono-code px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">Live DSP</span>
+        </div>
+
+        <!-- Slider 1: Transducer Frequency (MHz) -->
+        <div class="mb-5">
+          <div class="flex justify-between items-center mb-1.5">
+            <label for="freqSlider" class="text-xs font-medium text-slate-300 flex items-center">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 mr-2"></span>
+              <span>1. Center Frequency (<span class="math-tex">f_0</span>)</span>
+            </label>
+            <span class="font-mono-code text-xs font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-900" id="freqValue">7.5 MHz</span>
+          </div>
+          <input type="range" id="freqSlider" min="2.5" max="15.0" step="0.1" value="7.5" class="w-full cursor-pointer">
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono-code">
+            <span>2.5 MHz (Deep Penetration)</span>
+            <span>15.0 MHz (Superficial Resolution)</span>
+          </div>
+        </div>
+
+        <!-- Slider 2: TGC Gain Slope (dB/cm) -->
+        <div class="mb-5">
+          <div class="flex justify-between items-center mb-1.5">
+            <label for="tgcSlider" class="text-xs font-medium text-slate-300 flex items-center">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>
+              <span>2. TGC Slope (<span class="math-tex">\beta_{\text{TGC}}</span>)</span>
+            </label>
+            <span class="font-mono-code text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900" id="tgcValue">1.35 dB/cm</span>
+          </div>
+          <input type="range" id="tgcSlider" min="0.2" max="3.5" step="0.05" value="1.35" class="w-full cursor-pointer slider-emerald">
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono-code">
+            <span>0.2 dB/cm (Flat)</span>
+            <span>3.5 dB/cm (Strong Amplification)</span>
+          </div>
+        </div>
+
+        <!-- Slider 3: Focal Depth (mm) -->
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-1.5">
+            <label for="focusSlider" class="text-xs font-medium text-slate-300 flex items-center">
+              <span class="w-2 h-2 rounded-full bg-amber-400 mr-2"></span>
+              <span>3. Focal Depth (<span class="math-tex">F_d</span>)</span>
+            </label>
+            <span class="font-mono-code text-xs font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-900" id="focusValue">35 mm</span>
+          </div>
+          <input type="range" id="focusSlider" min="10" max="70" step="1" value="35" class="w-full cursor-pointer slider-amber">
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono-code">
+            <span>10 mm (Near Zone)</span>
+            <span>70 mm (Far Zone)</span>
+          </div>
+        </div>
+
+        <!-- Tissue Phantom Presets Including Obstetric Fetal Scan -->
+        <div class="pt-3 border-t border-slate-800/80">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Clinical Tissue Phantom</label>
+            <span class="text-[10px] text-cyan-400 font-mono-code">OB/GYN Calipers Active</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button class="phantom-btn active bg-cyan-600/30 border border-cyan-500 text-cyan-200 text-xs py-2 px-1 rounded-lg font-medium text-center transition hover:bg-cyan-600/40" data-phantom="fetus">
+              <i class="fa-solid fa-baby block mb-1 text-sm text-cyan-300"></i>
+              Fetus CRL
+            </button>
+            <button class="phantom-btn bg-slate-800/70 border border-slate-700 text-slate-300 text-xs py-2 px-1 rounded-lg font-medium text-center transition hover:bg-slate-700" data-phantom="carotid">
+              <i class="fa-solid fa-heart-pulse block mb-1 text-sm"></i>
+              Carotid
+            </button>
+            <button class="phantom-btn bg-slate-800/70 border border-slate-700 text-slate-300 text-xs py-2 px-1 rounded-lg font-medium text-center transition hover:bg-slate-700" data-phantom="gallbladder">
+              <i class="fa-solid fa-gem block mb-1 text-sm"></i>
+              Calculus
+            </button>
+            <button class="phantom-btn bg-slate-800/70 border border-slate-700 text-slate-300 text-xs py-2 px-1 rounded-lg font-medium text-center transition hover:bg-slate-700" data-phantom="thyroid">
+              <i class="fa-solid fa-circle-nodes block mb-1 text-sm"></i>
+              Thyroid
+            </button>
+          </div>
+        </div>
+
+        <!-- Audio Pulse Doppler Toggle -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-volume-high text-slate-400 text-xs"></i>
+            <span class="text-xs text-slate-300">Pulse Echo Audio Synth</span>
+          </div>
+          <button id="audioToggle" class="px-2.5 py-1 text-xs font-mono-code rounded-md bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition">
+            <span id="audioState">MUTED</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-[#0e1626] border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-800 text-slate-400">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-square-root-variable text-cyan-400 text-xs"></i>
+            <h3 class="text-xs font-semibold tracking-wide text-slate-200 uppercase">Acoustic Physics & LaTeX Telemetry</h3>
+          </div>
+          <span class="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800">ISO 16810</span>
+        </div>
+
+        <!-- Eye-Pleasing LaTeX Mathematical Principles Panel -->
+        <div class="bg-gradient-to-br from-slate-900 via-[#0b1322] to-slate-900 p-3 rounded-xl border border-slate-800/90 mb-3 space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800/80 pb-1.5">
+            <span class="font-semibold text-slate-200">Acoustic Governing Equations</span>
+            <span class="text-[10px] font-mono-code text-cyan-400">Wave Dispersion</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs py-1">
+            <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/70">
+              <div class="text-[10px] text-slate-400 mb-0.5">Wavelength Relation:</div>
+              <div class="text-cyan-300 text-center font-serif text-sm py-0.5 math-display" id="latexWavelengthFormula">
+                $$\lambda = \frac{c}{f_0}$$
+              </div>
+            </div>
+            <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/70">
+              <div class="text-[10px] text-slate-400 mb-0.5">Acoustic Reflection:</div>
+              <div class="text-emerald-300 text-center font-serif text-sm py-0.5 math-display">
+                $$R = \left(\frac{Z_2 - Z_1}{Z_2 + Z_1}\right)^2$$
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/70">
+            <div class="text-[10px] text-slate-400 mb-0.5">TGC & Attenuation Signal Transfer:</div>
+            <div class="text-amber-300 text-center font-serif text-xs py-0.5 math-display">
+              $$V(z) = V_0 \cdot e^{-\alpha f_0 z} \cdot 10^{\frac{\beta_{\text{TGC}} \cdot z}{20}}$$
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 text-xs font-mono-code">
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">Acoustic Velocity (<span class="math-tex">c</span>)</span>
+            <span class="text-slate-100 font-bold">1,540 m/s</span>
+            <span class="text-[9px] text-slate-500 block mt-0.5">Soft tissue nominal</span>
+          </div>
+
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">Wavelength (<span class="math-tex">\lambda</span>)</span>
+            <span class="text-cyan-400 font-bold" id="telemetryWavelength">0.205 mm</span>
+            <span class="text-[9px] text-slate-500 block mt-0.5" id="telemetryNearField">Rayleigh: 24.5mm</span>
+          </div>
+
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">Axial Resolution (<span class="math-tex">\delta_z \approx \lambda</span>)</span>
+            <span class="text-emerald-400 font-bold" id="telemetryAxialRes">0.21 mm</span>
+            <span class="text-[9px] text-emerald-500/80 block mt-0.5" id="telemetryResRating">High Resolution</span>
+          </div>
+
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-slate-400 text-[10px] block">Max Penetration (<span class="math-tex">z_{\max}</span>)</span>
+            <span class="text-amber-400 font-bold" id="telemetryPenetration">62 mm</span>
+            <span class="text-[9px] text-slate-500 block mt-0.5" id="telemetryAtten">At 50dB Dynamic SNR</span>
+          </div>
+        </div>
+
+        <!-- Acoustic Impedance Legend Mini-Bar -->
+        <div class="mt-3 bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 text-[11px]">
+          <span class="text-slate-400 font-medium block mb-1.5">Acoustic Impedances (<span class="math-tex">Z = \rho \cdot c</span>):</span>
+          <div class="flex flex-wrap gap-2 text-[10px] font-mono-code">
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300">Amniotic Fluid: 1.50 MRayl</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-purple-300">Fetal Bone: 5.80 MRayl</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300">Myometrium: 1.63 MRayl</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-amber-300">Fat: 1.38 MRayl</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Ultrasound Real-Time Screen Graphs (8 cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- TOP VIEW: Real-Time B-Mode Ultrasound 2D Scan Screen -->
+      <div class="bg-[#080d18] border border-slate-800 rounded-2xl p-4 shadow-2xl relative crt-glow">
+        <div class="flex flex-wrap items-center justify-between pb-2 mb-2 border-b border-slate-800 text-xs">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+            <h2 class="font-bold tracking-wide text-white uppercase flex items-center">
+              <i class="fa-solid fa-desktop mr-2 text-emerald-400"></i>
+              Real-Time 2D B-Mode Sector Screen
+            </h2>
+          </div>
+          <div class="flex items-center space-x-3 font-mono-code text-[11px] text-slate-400">
+            <span class="hidden sm:inline">Tissue Depth: <strong class="text-white">0 - 80 mm</strong></span>
+            <span class="bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 px-2 py-0.5 rounded">DYNAMIC FOCUS: ON</span>
+          </div>
+        </div>
+
+        <!-- Ultrasound Canvas Screen Container -->
+        <div class="relative w-full aspect-[16/9] sm:aspect-[21/10] bg-black rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
+          <canvas id="bmodeCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+          <div class="scanline-overlay absolute inset-0"></div>
+
+          <!-- On-screen clinical calipers overlay HUD -->
+          <div class="absolute top-2 left-3 font-mono-code text-[10px] text-cyan-300 pointer-events-none select-none bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-cyan-900/50">
+            <div id="hudTissueName" class="font-semibold text-white tracking-wide">PHANTOM: OBSTETRIC 1ST TRIMESTER (CRL BIOPSY)</div>
+            <div class="text-slate-400 flex items-center gap-2 mt-0.5">
+              <span id="hudAlineIndicator">A-LINE VECTOR: CENTERLINE (40 mm)</span>
+              <span class="text-cyan-400 font-bold bg-cyan-950 px-1 rounded border border-cyan-800/80" id="hudCrlBadge">CRL: 54.2 mm &middot; 12w0d</span>
+            </div>
+          </div>
+
+          <div class="absolute top-2 right-3 font-mono-code text-[10px] text-emerald-400 pointer-events-none select-none bg-black/60 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-emerald-900/50 text-right">
+            <div>GAIN: <span id="hudGainDisplay">48 dB</span> | DR: <span class="text-white">65 dB</span></div>
+            <div class="text-amber-400">TRANSDUCER: <span class="text-white font-bold" id="hudProbeDisplay">C5-2 Curved Vector</span></div>
+          </div>
+
+          <!-- Focal Depth Pointer on Depth Scale -->
+          <div id="focalMarker" class="absolute left-2 pointer-events-none transition-all duration-75 text-amber-400 text-xs font-bold drop-shadow">
+            ▶ <span class="text-[9px] font-mono-code ml-0.5">FOC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM VIEW: Real-Time RF Oscilloscope Wave Graph + Envelope Detection -->
+      <div class="bg-[#080d18] border border-slate-800 rounded-2xl p-4 shadow-2xl rf-glow">
+        <div class="flex flex-wrap items-center justify-between pb-2 mb-2 border-b border-slate-800 text-xs">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-chart-line text-cyan-400"></i>
+            <h2 class="font-bold tracking-wide text-white uppercase">
+              RFWaveCode Oscilloscope &middot; Real-Time A-Scan Signal
+            </h2>
+          </div>
+          <div class="flex items-center space-x-4 font-mono-code text-[11px]">
+            <div class="flex items-center space-x-1.5">
+              <span class="w-3 h-1 bg-cyan-400 rounded"></span>
+              <span class="text-slate-300">Raw RF Pulse Echo</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <span class="w-3 h-1 bg-amber-400 rounded"></span>
+              <span class="text-slate-300">Hilbert Envelope</span>
+            </div>
+            <div class="flex items-center space-x-1.5 hidden sm:flex">
+              <span class="w-3 h-0.5 bg-emerald-400/70 border-b border-dashed border-emerald-400"></span>
+              <span class="text-slate-400">TGC Curve</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RF Graph Canvas -->
+        <div class="relative w-full h-44 sm:h-52 bg-[#040810] rounded-xl overflow-hidden border border-slate-800">
+          <canvas id="rfGraphCanvas" class="w-full h-full block"></canvas>
+          <div class="scanline-overlay absolute inset-0"></div>
+
+          <!-- Canvas Interactive Crosshair Readout -->
+          <div id="rfCrosshairInfo" class="absolute bottom-2 left-3 font-mono-code text-[10px] text-cyan-300 bg-slate-900/90 border border-slate-700 px-2 py-0.5 rounded pointer-events-none hidden">
+            Depth: 32.4 mm | Time: 42.1 µs | Amp: 0.74 V
+          </div>
+        </div>
+
+        <div class="mt-2.5 flex flex-wrap items-center justify-between text-[11px] font-mono-code text-slate-400 px-1">
+          <span>Depth Range: 0.0 mm ($0\,\mu\text{s}$) &longrightarrow; 80.0 mm ($103.9\,\mu\text{s}$)</span>
+          <span class="text-cyan-400">Sampling Rate: 100 MSamples/sec</span>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer class="mt-auto border-t border-slate-800 bg-[#060a12] px-4 py-3 text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info text-cyan-400"></i>
+        <span><strong>Acoustic Model:</strong> Biometric Crown-Rump Length (CRL) ultrasound imaging with Rayleigh speckle scattering, dynamic focus convergence, and real-time KaTeX mathematical physics demodulation.</span>
+      </div>
+      <div class="font-mono-code text-slate-400 text-[11px]">
+        Diagnostic Medical Sonography &middot; RFWaveCode ObGyn Edition
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // State management for ultrasound simulation
+    const state = {
+      frequencyMHz: 7.5,     // Slider 1: 2.5 - 15.0 MHz
+      tgcSlope: 1.35,        // Slider 2: 0.2 - 3.5 dB/cm
+      focalDepthMm: 35.0,    // Slider 3: 10 - 70 mm
+      cTissue: 1540,         // Speed of sound in soft tissue (m/s)
+      maxDepthMm: 80,        // Max imaging depth in mm
+      isFrozen: false,
+      selectedPhantom: 'fetus', // Default matches user ultrasound image!
+      audioEnabled: false,
+      sampleRateMSPS: 100,   // Simulation RF sampling
+      timeStep: 0,
+      fps: 60,
+      selectedAlineIndex: 0.5, // Relative position [0..1] of highlighted A-line
+      // Crown Rump Length Calipers (matching user image's cyan dotted line with crosses)
+      crlStart: { x: 0.23, y: 0.53 }, // Cranial crown
+      crlEnd: { x: 0.77, y: 0.62 }     // Rump caudal tip
+    };
+
+    // Audio Context for Pulsed Ultrasound Chirp Synthesizer
+    let audioCtx = null;
+    let audioOsc = null;
+    let audioGain = null;
+
+    // References to DOM elements
+    const freqSlider = document.getElementById('freqSlider');
+    const tgcSlider = document.getElementById('tgcSlider');
+    const focusSlider = document.getElementById('focusSlider');
+    const freqValue = document.getElementById('freqValue');
+    const tgcValue = document.getElementById('tgcValue');
+    const focusValue = document.getElementById('focusValue');
+    const freezeBtn = document.getElementById('freezeBtn');
+    const freezeText = document.getElementById('freezeText');
+    const freezeIcon = document.getElementById('freezeIcon');
+    const fpsDisplay = document.getElementById('fpsDisplay');
+    const probeTypeBadge = document.getElementById('probeTypeBadge');
+    const miDisplay = document.getElementById('miDisplay');
+    const tiDisplay = document.getElementById('tiDisplay');
+    const hudTissueName = document.getElementById('hudTissueName');
+    const hudAlineIndicator = document.getElementById('hudAlineIndicator');
+    const hudCrlBadge = document.getElementById('hudCrlBadge');
+    const hudProbeDisplay = document.getElementById('hudProbeDisplay');
+    const focalMarker = document.getElementById('focalMarker');
+    const audioToggle = document.getElementById('audioToggle');
+    const audioState = document.getElementById('audioState');
+    const phantomButtons = document.querySelectorAll('.phantom-btn');
+
+    // Telemetry DOM elements
+    const telemetryWavelength = document.getElementById('telemetryWavelength');
+    const telemetryNearField = document.getElementById('telemetryNearField');
+    const telemetryAxialRes = document.getElementById('telemetryAxialRes');
+    const telemetryResRating = document.getElementById('telemetryResRating');
+    const telemetryPenetration = document.getElementById('telemetryPenetration');
+
+    // Canvas elements & contexts
+    const bmodeCanvas = document.getElementById('bmodeCanvas');
+    const bmodeCtx = bmodeCanvas.getContext('2d');
+    const rfCanvas = document.getElementById('rfGraphCanvas');
+    const rfCtx = rfCanvas.getContext('2d');
+    const rfCrosshairInfo = document.getElementById('rfCrosshairInfo');
+
+    // Anatomical acoustic layers for phantoms
+    const phantoms = {
+      fetus: {
+        name: "OBSTETRIC 1ST TRIMESTER (CRL MEASUREMENT)",
+        probe: "C5-2 Curvilinear",
+        features: [
+          { depth: 3, thickness: 5, z: 1.40, echogenicity: 0.40, label: "Maternal Abdominal Wall" },
+          { depth: 8, thickness: 10, z: 1.38, echogenicity: 0.28, label: "Subcutaneous Adipose" },
+          { depth: 18, thickness: 9, z: 1.63, echogenicity: 0.65, label: "Anterior Myometrium" },
+          { depth: 27, thickness: 35, z: 1.50, echogenicity: 0.02, isSac: true, label: "Gestational Sac (Amniotic Fluid)" },
+          { depth: 35, thickness: 22, z: 2.10, echogenicity: 0.85, isFetus: true, label: "Fetal Head & Somatic Axis" },
+          { depth: 62, thickness: 10, z: 1.64, echogenicity: 0.68, label: "Posterior Uterine Wall" },
+          { depth: 72, thickness: 8, z: 1.61, echogenicity: 0.35, label: "Retroperitoneal Tissue" }
+        ]
+      },
+      carotid: {
+        name: "COMMON CAROTID & ANECHOIC CYST",
+        probe: "L12-4 Linear",
+        features: [
+          { depth: 4, thickness: 3, z: 1.45, echogenicity: 0.45, label: "Epidermis & Dermis" },
+          { depth: 10, thickness: 8, z: 1.38, echogenicity: 0.25, label: "Subcutaneous Fat" },
+          { depth: 22, thickness: 12, z: 1.62, echogenicity: 0.55, label: "Sternocleidomastoid Muscle" },
+          { depth: 32, thickness: 10, z: 1.61, echogenicity: 0.03, isVessel: true, label: "Common Carotid Lumen" },
+          { depth: 42, thickness: 2, z: 1.75, echogenicity: 0.85, label: "Posterior Vessel Wall" },
+          { depth: 52, thickness: 14, z: 1.58, echogenicity: 0.05, isCyst: true, label: "Simple Fluid Cyst" },
+          { depth: 66, thickness: 14, z: 1.63, echogenicity: 0.40, label: "Deep Connective Fascia" }
+        ]
+      },
+      gallbladder: {
+        name: "GALLBLADDER LUMEN & HYPERECHOIC CALCULUS",
+        probe: "C5-1 Abdominal",
+        features: [
+          { depth: 6, thickness: 6, z: 1.38, echogenicity: 0.35, label: "Subcutaneous Fat" },
+          { depth: 18, thickness: 14, z: 1.65, echogenicity: 0.60, label: "Hepatic Parenchyma (Liver)" },
+          { depth: 34, thickness: 18, z: 1.55, echogenicity: 0.02, isVessel: true, label: "Gallbladder Lumen (Bile)" },
+          { depth: 44, thickness: 7, z: 7.80, echogenicity: 1.00, isStone: true, label: "Calcified Gallstone" },
+          { depth: 52, thickness: 28, z: 1.65, echogenicity: 0.08, isShadow: true, label: "Posterior Acoustic Shadow" }
+        ]
+      },
+      thyroid: {
+        name: "THYROID LOBE & SOLID MICRO-NODULE",
+        probe: "L15-7 High-Res",
+        features: [
+          { depth: 5, thickness: 4, z: 1.40, echogenicity: 0.30, label: "Anterior Neck Skin" },
+          { depth: 12, thickness: 7, z: 1.62, echogenicity: 0.45, label: "Strap Muscles" },
+          { depth: 22, thickness: 26, z: 1.64, echogenicity: 0.70, label: "Thyroid Parenchyma" },
+          { depth: 32, thickness: 9, z: 1.50, echogenicity: 0.35, isNodule: true, label: "Heterogeneous Nodule" },
+          { depth: 48, thickness: 12, z: 1.63, echogenicity: 0.50, label: "Tracheoesophageal Tissue" },
+          { depth: 65, thickness: 15, z: 1.65, echogenicity: 0.35, label: "Longus Colli Muscle" }
+        ]
+      }
+    };
+
+    // Render LaTeX using KaTeX
+    function renderLatexFormulas() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    function updateAudioSynth() {
+      if (!audioCtx || !state.audioEnabled || state.isFrozen) return;
+      // Synthesize subtle medical doppler/ultrasound pulse sound based on frequency & focus
+      const pitch = 220 + (state.frequencyMHz * 40) + Math.sin(state.timeStep * 0.1) * 25;
+      audioOsc.frequency.setTargetAtTime(pitch, audioCtx.currentTime, 0.05);
+      // Soft rhythmic pulse
+      const pulse = 0.015 + 0.01 * Math.sin(state.timeStep * 0.2);
+      audioGain.gain.setTargetAtTime(pulse, audioCtx.currentTime, 0.05);
+    }
+
+    audioToggle.addEventListener('click', () => {
+      if (!audioCtx) initAudio();
+      state.audioEnabled = !state.audioEnabled;
+      if (state.audioEnabled) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        audioState.textContent = 'ACTIVE';
+        audioToggle.classList.remove('bg-slate-800', 'text-slate-400');
+        audioToggle.classList.add('bg-cyan-600', 'text-white');
+      } else {
+        if (audioGain) audioGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        audioState.textContent = 'MUTED';
+        audioToggle.classList.remove('bg-cyan-600', 'text-white');
+        audioToggle.classList.add('bg-slate-800', 'text-slate-400');
+      }
+    });
+
+    function updatePhysicsTelemetry() {
+      const f = state.frequencyMHz * 1e6; // Hz
+      const c = state.cTissue;            // m/s
+      const wavelengthM = c / f;          // m
+      const wavelengthMm = wavelengthM * 1000;
+
+      // Axial resolution ~ 1 to 1.5 wavelengths for typical 2-cycle pulse
+      const axialResMm = wavelengthMm * 1.05;
+
+      // Rayleigh Near-field limit: D^2 / (4 * lambda), assume aperture D = 14 mm
+      const apertureMm = 14;
+      const nearFieldMm = (apertureMm * apertureMm) / (4 * wavelengthMm);
+
+      // Max practical penetration (attenuation ~ 0.5 to 0.7 dB/(cm*MHz))
+      // penetration drops as frequency increases
+      const maxPenMm = Math.min(120, Math.max(25, 450 / state.frequencyMHz));
+
+      // Mechanical & Thermal Indices
+      const mi = (1.4 / Math.sqrt(state.frequencyMHz)).toFixed(2);
+      const ti = (0.05 * state.frequencyMHz * (state.focalDepthMm / 35)).toFixed(2);
+
+      telemetryWavelength.textContent = wavelengthMm.toFixed(3) + ' mm';
+      telemetryNearField.textContent = `Rayleigh: ${nearFieldMm.toFixed(1)} mm`;
+      telemetryAxialRes.textContent = axialResMm.toFixed(2) + ' mm';
+      telemetryPenetration.textContent = Math.round(maxPenMm) + ' mm';
+
+      miDisplay.textContent = mi;
+      tiDisplay.textContent = ti;
+
+      if (state.frequencyMHz >= 9.0) {
+        probeTypeBadge.textContent = 'L15-7 High-Res';
+        telemetryResRating.textContent = 'Ultra-Fine MSK';
+        telemetryResRating.className = 'text-[9px] text-cyan-400 block mt-0.5';
+      } else if (state.frequencyMHz >= 5.0) {
+        probeTypeBadge.textContent = state.selectedPhantom === 'fetus' ? 'C5-2 ObGyn' : 'L12-4 Vascular';
+        telemetryResRating.textContent = 'High Resolution';
+        telemetryResRating.className = 'text-[9px] text-emerald-400 block mt-0.5';
+      } else {
+        probeTypeBadge.textContent = 'C5-1 Curvilinear';
+        telemetryResRating.textContent = 'Deep Penetration';
+        telemetryResRating.className = 'text-[9px] text-amber-400 block mt-0.5';
+      }
+
+      // Update Focal Marker on B-mode UI
+      const canvasHeight = bmodeCanvas.clientHeight || 260;
+      const focalNormalized = state.focalDepthMm / state.maxDepthMm;
+      focalMarker.style.top = `${Math.min(canvasHeight - 20, Math.max(12, focalNormalized * canvasHeight - 6))}px`;
+    }
+
+    freqSlider.addEventListener('input', (e) => {
+      state.frequencyMHz = parseFloat(e.target.value);
+      freqValue.textContent = state.frequencyMHz.toFixed(1) + ' MHz';
+      updatePhysicsTelemetry();
+    });
+
+    tgcSlider.addEventListener('input', (e) => {
+      state.tgcSlope = parseFloat(e.target.value);
+      tgcValue.textContent = state.tgcSlope.toFixed(2) + ' dB/cm';
+    });
+
+    focusSlider.addEventListener('input', (e) => {
+      state.focalDepthMm = parseFloat(e.target.value);
+      focusValue.textContent = Math.round(state.focalDepthMm) + ' mm';
+      updatePhysicsTelemetry();
+    });
+
+    freezeBtn.addEventListener('click', () => {
+      state.isFrozen = !state.isFrozen;
+      if (state.isFrozen) {
+        freezeText.textContent = 'Unfreeze';
+        freezeIcon.className = 'fa-solid fa-play text-xs text-emerald-400';
+        freezeBtn.classList.add('border-emerald-500', 'bg-emerald-950/60');
+      } else {
+        freezeText.textContent = 'Freeze';
+        freezeIcon.className = 'fa-solid fa-pause text-xs';
+        freezeBtn.classList.remove('border-emerald-500', 'bg-emerald-950/60');
+      }
+    });
+
+    phantomButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        phantomButtons.forEach(b => {
+          b.classList.remove('active', 'bg-cyan-600/30', 'border-cyan-500', 'text-cyan-200');
+          b.classList.add('bg-slate-800/70', 'border-slate-700', 'text-slate-300');
+        });
+        btn.classList.add('active', 'bg-cyan-600/30', 'border-cyan-500', 'text-cyan-200');
+        btn.classList.remove('bg-slate-800/70', 'border-slate-700', 'text-slate-300');
+        
+        state.selectedPhantom = btn.dataset.phantom;
+        hudTissueName.textContent = 'PHANTOM: ' + phantoms[state.selectedPhantom].name;
+        hudProbeDisplay.textContent = phantoms[state.selectedPhantom].probe;
+        if (state.selectedPhantom === 'fetus') {
+          hudCrlBadge.classList.remove('hidden');
+        } else {
+          hudCrlBadge.classList.add('hidden');
+        }
+        updatePhysicsTelemetry();
+      });
+    });
+
+    // Interactive canvas click to move active A-Line vector
+    bmodeCanvas.addEventListener('pointerdown', (e) => {
+      const rect = bmodeCanvas.getBoundingClientRect();
+      const xRatio = Math.max(0.05, Math.min(0.95, (e.clientX - rect.left) / rect.width));
+      state.selectedAlineIndex = xRatio;
+      const mmX = Math.round(xRatio * 50 - 25);
+      hudAlineIndicator.textContent = `A-LINE VECTOR: ${mmX >= 0 ? '+' : ''}${mmX} mm OFFSET`;
+    });
+
+    // Generates the raw A-Scan signal along depth:
+    // Returns { depthMm, timeMicrosec, rfVoltage, envelope, tgcCurve, layerName }
+    function computeAlineRFData(numSamples = 600) {
+      const currentPhantom = phantoms[state.selectedPhantom];
+      const data = [];
+      const f0 = state.frequencyMHz;
+      const tgcFactor = state.tgcSlope;
+      const focalDepth = state.focalDepthMm;
+      const c = state.cTissue; // 1540 m/s
+
+      // Total round-trip time in microsec for max depth
+      // t = 2 * d / c -> d = 80mm = 0.08m => t = 0.16 / 1540 = 103.9 microsec
+      const totalTimeMicrosec = (2 * (state.maxDepthMm / 1000) / c) * 1e6;
+
+      for (let i = 0; i < numSamples; i++) {
+        const fraction = i / (numSamples - 1);
+        const depthMm = fraction * state.maxDepthMm;
+        const timeUs = fraction * totalTimeMicrosec;
+
+        // Base attenuation due to tissue depth: alpha(f) * f * d
+        // Higher frequencies attenuate substantially more with depth
+        const attenCoeff = 0.55; // dB/(MHz*cm)
+        const depthCm = depthMm / 10;
+        const attenuationDb = attenCoeff * f0 * depthCm;
+        const attenuationLinear = Math.pow(10, -attenuationDb / 20);
+
+        // Time Gain Compensation (TGC) exponential amplification
+        const tgcDb = tgcFactor * depthCm * 1.8;
+        const tgcLinear = Math.pow(10, tgcDb / 20);
+
+        // Beam focal gain (waist of the ultrasound beam)
+        // Focus narrows lateral resolution and increases local amplitude
+        const focalSpread = 14.0; // mm
+        const focalDist = Math.abs(depthMm - focalDepth);
+        const focalGain = 1.0 + 0.9 * Math.exp(- (focalDist * focalDist) / (2 * focalSpread * focalSpread));
+
+        // Evaluate acoustic impedance boundaries and scatterers
+        let totalReflection = 0;
+        let activeLayerName = "Homogeneous Stroma";
+
+        for (let j = 0; j < currentPhantom.features.length; j++) {
+          const feat = currentPhantom.features[j];
+          const start = feat.depth;
+          const end = feat.depth + feat.thickness;
+
+          // Boundary Reflection: high reflection at layer transitions
+          const distToInterface = Math.min(Math.abs(depthMm - start), Math.abs(depthMm - end));
+          if (distToInterface < 1.3) {
+            const reflectionStrength = (feat.z > 5.0) ? 0.95 : (feat.isSac ? 0.75 : 0.45);
+            // RF pulse wave packet (Gaussian-windowed sine oscillation)
+            const pulseWidth = (1.5 / f0) * 8; // pulse duration in depth units
+            const waveArg = (depthMm - (depthMm < start + 1 ? start : end)) / pulseWidth;
+            const carrier = Math.cos(2 * Math.PI * f0 * 1.4 * waveArg);
+            const pulseEnvelope = Math.exp(-waveArg * waveArg * 4);
+            totalReflection += reflectionStrength * carrier * pulseEnvelope;
+          }
+
+          // Interior acoustic speckle scatterers
+          if (depthMm >= start && depthMm <= end) {
+            activeLayerName = feat.label;
+            if (feat.isSac || feat.isVessel || feat.isCyst) {
+              // Anechoic fluid interior
+              totalReflection += (Math.random() - 0.5) * 0.012;
+            } else if (feat.isFetus) {
+              // Fetal somatic echoes: spine, skull, cardiac activity
+              const fetalFlicker = Math.sin(state.timeStep * 0.25) * 0.15;
+              totalReflection += (Math.random() - 0.5) * (0.65 + fetalFlicker);
+            } else if (feat.isShadow) {
+              totalReflection += (Math.random() - 0.5) * 0.03;
+            } else if (feat.isStone) {
+              totalReflection += (Math.random() - 0.5) * 0.85;
+            } else {
+              // Normal tissue parenchyma speckle
+              const speckleFreq = 1.2 * f0;
+              const pseudoRandomPhase = Math.sin(depthMm * 14.2) * Math.cos(depthMm * 8.7);
+              totalReflection += (feat.echogenicity * 0.22) * Math.sin(depthMm * speckleFreq + pseudoRandomPhase);
+            }
+          }
+        }
+
+        // Add subtle instrumentation thermal noise floor
+        const noise = (Math.sin(i * 12.3 + state.timeStep) * 0.02) + ((Math.random() - 0.5) * 0.025);
+
+        // Combined raw RF voltage with TGC applied
+        let rfRaw = (totalReflection * focalGain * attenuationLinear * tgcLinear) + noise;
+
+        // Soft limit clipping
+        rfRaw = Math.max(-1.5, Math.min(1.5, rfRaw));
+
+        // Hilbert Envelope extraction (approximated rectified low-pass smoothing)
+        const envelope = Math.abs(rfRaw);
+
+        data.push({
+          depthMm,
+          timeMicrosec: timeUs,
+          rfVoltage: rfRaw,
+          envelope: envelope,
+          tgcCurve: Math.min(1.2, (tgcLinear / 6)),
+          activeLayerName
+        });
+      }
+
+      // Smooth the envelope to simulate low-pass anti-aliasing reconstruction
+      for (let i = 1; i < data.length - 1; i++) {
+        data[i].envelope = (data[i - 1].envelope * 0.25) + (data[i].envelope * 0.5) + (data[i + 1].envelope * 0.25);
+      }
+
+      return data;
+    }
+
+    function drawRFGraph(rfData) {
+      const width = rfCanvas.width = rfCanvas.clientWidth * window.devicePixelRatio;
+      const height = rfCanvas.height = rfCanvas.clientHeight * window.devicePixelRatio;
+      rfCtx.clearRect(0, 0, width, height);
+
+      const paddingLeft = 45 * window.devicePixelRatio;
+      const paddingRight = 20 * window.devicePixelRatio;
+      const paddingTop = 15 * window.devicePixelRatio;
+      const paddingBottom = 25 * window.devicePixelRatio;
+
+      const graphW = width - paddingLeft - paddingRight;
+      const graphH = height - paddingTop - paddingBottom;
+      const midY = paddingTop + graphH / 2;
+
+      // Draw Grid Lines (Time / Depth divisions)
+      rfCtx.strokeStyle = '#1e293b';
+      rfCtx.lineWidth = 1;
+      const numGridCols = 8;
+      const numGridRows = 4;
+
+      for (let i = 0; i <= numGridCols; i++) {
+        const x = paddingLeft + (i / numGridCols) * graphW;
+        rfCtx.beginPath();
+        rfCtx.moveTo(x, paddingTop);
+        rfCtx.lineTo(x, paddingTop + graphH);
+        rfCtx.stroke();
+
+        // X-axis label (Depth in mm)
+        const depthVal = Math.round((i / numGridCols) * state.maxDepthMm);
+        rfCtx.fillStyle = '#64748b';
+        rfCtx.font = `${9 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
+        rfCtx.textAlign = 'center';
+        rfCtx.fillText(`${depthVal}mm`, x, height - 8 * window.devicePixelRatio);
+      }
+
+      for (let j = 0; j <= numGridRows; j++) {
+        const y = paddingTop + (j / numGridRows) * graphH;
+        rfCtx.beginPath();
+        rfCtx.moveTo(paddingLeft, y);
+        rfCtx.lineTo(paddingLeft + graphW, y);
+        rfCtx.stroke();
+      }
+
+      // Zero Voltage center line
+      rfCtx.strokeStyle = '#334155';
+      rfCtx.setLineDash([4, 4]);
+      rfCtx.beginPath();
+      rfCtx.moveTo(paddingLeft, midY);
+      rfCtx.lineTo(paddingLeft + graphW, midY);
+      rfCtx.stroke();
+      rfCtx.setLineDash([]);
+
+      // Y-axis Voltage scale labels
+      rfCtx.textAlign = 'right';
+      rfCtx.fillStyle = '#64748b';
+      rfCtx.fillText('+1.0V', paddingLeft - 6, paddingTop + 10);
+      rfCtx.fillText(' 0.0V', paddingLeft - 6, midY + 4);
+      rfCtx.fillText('-1.0V', paddingLeft - 6, paddingTop + graphH);
+
+      // Draw Active TGC Curve in background
+      rfCtx.strokeStyle = 'rgba(16, 185, 129, 0.45)';
+      rfCtx.lineWidth = 1.8 * window.devicePixelRatio;
+      rfCtx.setLineDash([3, 3]);
+      rfCtx.beginPath();
+      for (let i = 0; i < rfData.length; i++) {
+        const x = paddingLeft + (i / (rfData.length - 1)) * graphW;
+        const normTgc = rfData[i].tgcCurve;
+        const y = (paddingTop + graphH) - normTgc * (graphH * 0.85);
+        if (i === 0) rfCtx.moveTo(x, y);
+        else rfCtx.lineTo(x, y);
+      }
+      rfCtx.stroke();
+      rfCtx.setLineDash([]);
+
+      // Draw Raw RF Waveform (Cyan)
+      rfCtx.strokeStyle = '#38bdf8';
+      rfCtx.lineWidth = 1.3 * window.devicePixelRatio;
+      rfCtx.beginPath();
+      for (let i = 0; i < rfData.length; i++) {
+        const x = paddingLeft + (i / (rfData.length - 1)) * graphW;
+        const voltage = rfData[i].rfVoltage;
+        const y = midY - (voltage * (graphH * 0.44));
+        if (i === 0) rfCtx.moveTo(x, y);
+        else rfCtx.lineTo(x, y);
+      }
+      rfCtx.stroke();
+
+      // Draw Hilbert Demodulation Envelope (Amber)
+      rfCtx.strokeStyle = '#f59e0b';
+      rfCtx.lineWidth = 1.7 * window.devicePixelRatio;
+      rfCtx.beginPath();
+      for (let i = 0; i < rfData.length; i++) {
+        const x = paddingLeft + (i / (rfData.length - 1)) * graphW;
+        const env = rfData[i].envelope;
+        const y = midY - (env * (graphH * 0.44));
+        if (i === 0) rfCtx.moveTo(x, y);
+        else rfCtx.lineTo(x, y);
+      }
+      rfCtx.stroke();
+
+      // Mirror Envelope on negative half
+      rfCtx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+      rfCtx.beginPath();
+      for (let i = 0; i < rfData.length; i++) {
+        const x = paddingLeft + (i / (rfData.length - 1)) * graphW;
+        const env = rfData[i].envelope;
+        const y = midY + (env * (graphH * 0.44));
+        if (i === 0) rfCtx.moveTo(x, y);
+        else rfCtx.lineTo(x, y);
+      }
+      rfCtx.stroke();
+
+      // Highlight Current Focal Marker on RF Graph
+      const focalNorm = state.focalDepthMm / state.maxDepthMm;
+      const focalX = paddingLeft + focalNorm * graphW;
+      rfCtx.strokeStyle = '#f59e0b';
+      rfCtx.lineWidth = 1;
+      rfCtx.setLineDash([2, 2]);
+      rfCtx.beginPath();
+      rfCtx.moveTo(focalX, paddingTop);
+      rfCtx.lineTo(focalX, paddingTop + graphH);
+      rfCtx.stroke();
+      rfCtx.setLineDash([]);
+
+      // Focal Label
+      rfCtx.fillStyle = '#f59e0b';
+      rfCtx.font = `bold ${8 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
+      rfCtx.textAlign = 'center';
+      rfCtx.fillText('FOCUS', focalX, paddingTop - 4);
+    }
+
+    function drawBModeUltrasound(rfData) {
+      const width = bmodeCanvas.width = bmodeCanvas.clientWidth * window.devicePixelRatio;
+      const height = bmodeCanvas.height = bmodeCanvas.clientHeight * window.devicePixelRatio;
+      bmodeCtx.clearRect(0, 0, width, height);
+
+      // Deep medical console black background
+      bmodeCtx.fillStyle = '#010408';
+      bmodeCtx.fillRect(0, 0, width, height);
+
+      const currentPhantom = phantoms[state.selectedPhantom];
+
+      // Sector bounds
+      const topOriginX = width / 2;
+      const topOriginY = 12 * window.devicePixelRatio;
+      const sectorDepth = height - 20 * window.devicePixelRatio;
+      const sectorSpread = width * 0.82;
+
+      // Draw Sector Grid Arc & Measurement Calipers
+      bmodeCtx.strokeStyle = '#1e293b';
+      bmodeCtx.lineWidth = 1;
+
+      // Depth Caliper arcs every 10 mm
+      const numArcs = 8;
+      for (let a = 1; a <= numArcs; a++) {
+        const r = (a / numArcs) * sectorDepth;
+        bmodeCtx.beginPath();
+        bmodeCtx.arc(topOriginX, topOriginY, r, Math.PI * 0.25, Math.PI * 0.75);
+        bmodeCtx.stroke();
+
+        // Depth markers text on right edge
+        const markerDepthMm = a * 10;
+        const textY = topOriginY + r;
+        bmodeCtx.fillStyle = '#64748b';
+        bmodeCtx.font = `${9 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
+        bmodeCtx.textAlign = 'left';
+        bmodeCtx.fillText(`${markerDepthMm}`, width - 26 * window.devicePixelRatio, textY);
+      }
+
+      // Draw Ultrasound Image Raster (B-Mode Intensity Matrix)
+      const imageData = bmodeCtx.createImageData(width, height);
+      const buf = new Uint32Array(imageData.data.buffer);
+
+      // Animate subtle live physiological tremor/speckle motion if not frozen
+      const motionPhase = state.isFrozen ? 0 : state.timeStep * 0.08;
+      const fetalHeartPhase = state.isFrozen ? 1 : Math.sin(state.timeStep * 0.35);
+
+      // Construct 2D tissue ultrasound scan map
+      for (let y = Math.floor(topOriginY); y < height - 10; y++) {
+        const depthFrac = (y - topOriginY) / sectorDepth;
+        if (depthFrac < 0 || depthFrac > 1) continue;
+
+        const depthMm = depthFrac * state.maxDepthMm;
+
+        // Sector curvature bounds
+        const halfWidthAtDepth = (width * 0.18) + (depthFrac * (sectorSpread * 0.46));
+        const minX = Math.floor(topOriginX - halfWidthAtDepth);
+        const maxX = Math.ceil(topOriginX + halfWidthAtDepth);
+
+        // Calculate active anatomical feature at current depth
+        let baseEcho = 0.25;
+
+        for (let j = 0; j < currentPhantom.features.length; j++) {
+          const feat = currentPhantom.features[j];
+          if (depthMm >= feat.depth && depthMm <= feat.depth + feat.thickness) {
+            baseEcho = feat.echogenicity;
+            break;
+          }
+        }
+
+        // TGC depth amplification factor
+        const tgcAmp = 0.75 + (state.tgcSlope * 0.35 * (depthMm / 10));
+
+        // Focal zone beam sharpening & brightness
+        const focalProximity = Math.abs(depthMm - state.focalDepthMm);
+        const focalBoost = Math.max(0, 1.2 - (focalProximity / 24));
+
+        for (let x = Math.max(0, minX); x < Math.min(width, maxX); x++) {
+          const lateralFrac = (x - topOriginX) / halfWidthAtDepth; // -1.0 (left) to +1.0 (right)
+
+          // Lateral beam profile apodization
+          const apodization = Math.cos(lateralFrac * Math.PI * 0.48);
+
+          let localizedEcho = baseEcho;
+
+          // ==================== PHANTOM 1: OBSTETRIC FETAL SCAN (Exact match to User Image) ====================
+          if (state.selectedPhantom === 'fetus') {
+            // 1. Gestational Sac (Dark crescent/oval cavity containing amniotic fluid)
+            const sacX = lateralFrac * 1.15;
+            const sacY = (depthMm - 45.0) / 22.0;
+            const sacEllipseDist = Math.hypot(sacX, sacY);
+
+            if (sacEllipseDist < 0.95) {
+              // Inside gestational sac: dark anechoic amniotic fluid background
+              localizedEcho = 0.025;
+
+              // 2. Fetal Head (Crown) at left-center (lateralFrac ~ -0.40, depth ~ 43mm)
+              const headDist = Math.hypot((lateralFrac - (-0.38)) * 26, (depthMm - 43.0));
+              if (headDist < 7.5) {
+                // Fetal skull calvarium: hyperechoic rim with dark intracranial midline
+                if (headDist > 5.5) {
+                  localizedEcho = 0.95; // Cranial bone vault
+                } else if (Math.abs(depthMm - 43.0) < 1.2) {
+                  localizedEcho = 0.65; // Falx cerebri echo
+                } else {
+                  localizedEcho = 0.22; // Brain parenchyma
+                }
+              }
+
+              // 3. Fetal Spine & Dorsal Body Axis (curving from head to rump)
+              // Center coordinates along path from (-0.3, 44) to (+0.42, 51)
+              const tAxis = (lateralFrac + 0.30) / 0.75; // 0 to 1 along fetal length
+              if (tAxis >= 0.05 && tAxis <= 1.05) {
+                const spineExpectedDepth = 44.0 + (tAxis * 8.0) - Math.sin(tAxis * Math.PI) * 4.5;
+                const spineDist = Math.abs(depthMm - spineExpectedDepth);
+
+                // Hyperechoic spine vertebrae line with acoustic shadowing
+                if (spineDist < 2.0) {
+                  const vertebraEcho = (Math.sin(lateralFrac * 45) > 0.1) ? 0.92 : 0.45;
+                  localizedEcho = vertebraEcho;
+                } else if (spineDist < 6.5 && depthMm > spineExpectedDepth) {
+                  // Fetal torso viscera
+                  localizedEcho = 0.35;
+                  // Fetal Heart chamber flicker at chest level (tAxis ~ 0.3)
+                  if (Math.abs(tAxis - 0.32) < 0.12 && Math.abs(depthMm - (spineExpectedDepth + 2.5)) < 2.5) {
+                    localizedEcho = (fetalHeartPhase > 0) ? 0.04 : 0.75;
+                  }
+                }
+              }
+
+              // 4. Fetal Rump & Limb Buds (+0.44, depth ~ 52mm)
+              const rumpDist = Math.hypot((lateralFrac - 0.45) * 24, (depthMm - 51.5));
+              if (rumpDist < 6.8) {
+                localizedEcho = (rumpDist > 4.8) ? 0.85 : 0.42;
+              }
+
+              // 5. Anterior Fetal Limb Bud / Arm (+0.05, 41mm)
+              const limbDist = Math.hypot((lateralFrac - 0.02) * 22, (depthMm - 40.5));
+              if (limbDist < 3.2) {
+                localizedEcho = 0.78;
+              }
+
+            } else if (sacEllipseDist < 1.15) {
+              // Trophoblast / Decidua capsularis (bright rim of the gestational sac)
+              localizedEcho = 0.88;
+            } else {
+              // Surrounding maternal myometrium speckle stroma
+              localizedEcho = 0.48;
+            }
+
+          // ==================== PHANTOM 2: CAROTID & CYST ====================
+          } else if (state.selectedPhantom === 'carotid') {
+            const vesselCenterX = -0.15;
+            const vesselCenterY = 37.0;
+            const radiusMm = 6.0;
+            const dist = Math.hypot((lateralFrac - vesselCenterX) * 22, depthMm - vesselCenterY);
+            if (dist < radiusMm) {
+              localizedEcho = 0.02;
+            } else if (dist < radiusMm + 1.2) {
+              localizedEcho = 0.95;
+            }
+
+            const cystDist = Math.hypot((lateralFrac - 0.25) * 24, depthMm - 59.0);
+            if (cystDist < 7.0) {
+              localizedEcho = 0.03;
+            } else if (cystDist < 8.2) {
+              localizedEcho = 0.85;
+            } else if (cystDist < 14.0 && depthMm > 66.0) {
+              localizedEcho += 0.28;
+            }
+
+          // ==================== PHANTOM 3: GALLBLADDER & STONE ====================
+          } else if (state.selectedPhantom === 'gallbladder') {
+            const stoneCenterY = 47.0;
+            const stoneDist = Math.hypot(lateralFrac * 26, depthMm - stoneCenterY);
+            if (stoneDist < 4.5) {
+              localizedEcho = 1.0;
+            } else if (Math.abs(lateralFrac) < 0.18 && depthMm > stoneCenterY + 4.5) {
+              localizedEcho = 0.04;
+            }
+
+          // ==================== PHANTOM 4: THYROID NODULE ====================
+          } else if (state.selectedPhantom === 'thyroid') {
+            const noduleDist = Math.hypot((lateralFrac - 0.1) * 28, depthMm - 36.0);
+            if (noduleDist < 5.5) {
+              localizedEcho = 0.25 + 0.15 * Math.sin(depthMm * 4.0);
+            } else if (noduleDist < 6.8) {
+              localizedEcho = 0.82;
+            }
+          }
+
+          // Generate ultrasound Rayleigh speckle noise
+          const speckleScale = (state.frequencyMHz * 0.16);
+          const sX = x * speckleScale;
+          const sY = y * speckleScale;
+          const speckle = Math.abs(
+            Math.sin(sX * 0.72 + motionPhase) * Math.cos(sY * 0.85 - motionPhase) +
+            Math.sin(sX * 1.41 - sY * 0.93) * 0.5
+          );
+
+          // Combined B-Mode pixel intensity [0..255] with Log Compression
+          let intensity = (localizedEcho * 180 + speckle * 75) * tgcAmp * apodization * (1 + focalBoost * 0.3);
+          intensity = Math.min(255, Math.max(0, intensity));
+
+          // Clinical ultrasound monochrome phosphor palette (subtle cool blue-cyan tint)
+          const r = Math.floor(intensity * 0.86);
+          const g = Math.floor(intensity * 0.94);
+          const b = Math.floor(intensity * 1.00);
+
+          const pixelIndex = y * width + x;
+          buf[pixelIndex] = (255 << 24) | (b << 16) | (g << 8) | r;
+        }
+      }
+
+      bmodeCtx.putImageData(imageData, 0, 0);
+
+      // ==================== CLINICAL CALIPER OVERLAY (Matches Crown-Rump CRL in Photo) ====================
+      if (state.selectedPhantom === 'fetus') {
+        const calStartX = width * state.crlStart.x;
+        const calStartY = height * state.crlStart.y;
+        const calEndX = width * state.crlEnd.x;
+        const calEndY = height * state.crlEnd.y;
+
+        // Dotted cyan caliper measurement line
+        bmodeCtx.strokeStyle = '#00f0ff';
+        bmodeCtx.lineWidth = 1.8 * window.devicePixelRatio;
+        bmodeCtx.setLineDash([4 * window.devicePixelRatio, 4 * window.devicePixelRatio]);
+        bmodeCtx.beginPath();
+        bmodeCtx.moveTo(calStartX, calStartY);
+        bmodeCtx.lineTo(calEndX, calEndY);
+        bmodeCtx.stroke();
+        bmodeCtx.setLineDash([]);
+
+        // Draw Caliper crosshairs "+" markers at Crown and Rump
+        function drawCaliperCross(cx, cy) {
+          const arm = 5 * window.devicePixelRatio;
+          bmodeCtx.strokeStyle = '#00f0ff';
+          bmodeCtx.lineWidth = 2 * window.devicePixelRatio;
+          bmodeCtx.beginPath();
+          bmodeCtx.moveTo(cx - arm, cy);
+          bmodeCtx.lineTo(cx + arm, cy);
+          bmodeCtx.moveTo(cx, cy - arm);
+          bmodeCtx.lineTo(cx, cy + arm);
+          bmodeCtx.stroke();
+        }
+
+        drawCaliperCross(calStartX, calStartY);
+        drawCaliperCross(calEndX, calEndY);
+
+        // Biometric Calculation: CRL mm distance & Hadlock formula GA
+        const dx = (state.crlEnd.x - state.crlStart.x) * (sectorSpread * (state.maxDepthMm / sectorDepth));
+        const dy = (state.crlEnd.y - state.crlStart.y) * state.maxDepthMm;
+        const crlMm = Math.hypot(dx, dy) * 1.35;
+        const weeks = 8.052 * Math.pow(crlMm, 0.237); // Robinson & Fleming Formula
+        const weeksInt = Math.floor(weeks);
+        const daysInt = Math.round((weeks - weeksInt) * 7);
+
+        hudCrlBadge.textContent = `CRL: ${crlMm.toFixed(1)} mm · ${weeksInt}w${daysInt}d ±4d`;
+      }
+
+      // Render Selected Active A-Line Vector Overlay Line
+      const selectedX = width * state.selectedAlineIndex;
+      bmodeCtx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+      bmodeCtx.lineWidth = 1.5 * window.devicePixelRatio;
+      bmodeCtx.setLineDash([4, 3]);
+      bmodeCtx.beginPath();
+      bmodeCtx.moveTo(topOriginX, topOriginY);
+      bmodeCtx.lineTo(selectedX, height - 10);
+      bmodeCtx.stroke();
+      bmodeCtx.setLineDash([]);
+
+      // Probe Aperture emitter bar on top
+      bmodeCtx.fillStyle = '#38bdf8';
+      bmodeCtx.fillRect(width * 0.35, 6, width * 0.3, 4 * window.devicePixelRatio);
+    }
+
+    rfCanvas.addEventListener('pointermove', (e) => {
+      const rect = rfCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const graphW = rect.width;
+      const ratio = Math.max(0, Math.min(1, x / graphW));
+
+      const depthMm = (ratio * state.maxDepthMm).toFixed(1);
+      const timeUs = (ratio * ((2 * (state.maxDepthMm / 1000) / state.cTissue) * 1e6)).toFixed(1);
+
+      rfCrosshairInfo.classList.remove('hidden');
+      rfCrosshairInfo.textContent = `Depth: ${depthMm} mm | Time: ${timeUs} µs | Center Freq: ${state.frequencyMHz} MHz`;
+    });
+
+    rfCanvas.addEventListener('pointerleave', () => {
+      rfCrosshairInfo.classList.add('hidden');
+    });
+
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+
+      // Compute FPS counter every second
+      frameCount++;
+      if (currentTime - lastTime >= 1000) {
+        state.fps = frameCount;
+        fpsDisplay.textContent = state.fps;
+        frameCount = 0;
+        lastTime = currentTime;
+      }
+
+      if (!state.isFrozen) {
+        state.timeStep++;
+      }
+
+      // 1. Generate RF Signal & Envelope from simulation model
+      const rfData = computeAlineRFData(480);
+
+      // 2. Draw 2D B-Mode Ultrasound Viewport
+      drawBModeUltrasound(rfData);
+
+      // 3. Draw Real-Time RF Oscilloscope Wave Graph
+      drawRFGraph(rfData);
+
+      // 4. Update Audio Pulse Synthesizer if active
+      updateAudioSynth();
+    }
+
+    // Responsive Canvas Resize Observer
+    const resizeObserver = new ResizeObserver(() => {
+      updatePhysicsTelemetry();
+    });
+    resizeObserver.observe(bmodeCanvas);
+    resizeObserver.observe(rfCanvas);
+
+    // Initial state setup on boot
+    window.addEventListener('DOMContentLoaded', () => {
+      updatePhysicsTelemetry();
+      renderLatexFormulas();
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
